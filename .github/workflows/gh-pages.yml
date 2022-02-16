@@ -1,0 +1,39 @@
+name: pages build and deployment
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    container: klakegg/hugo:0.91.2-ext-ci
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build page with Hugo
+        run: hugo --minify
+      - name: Archive build output
+        run: tar --dereference --hard-dereference --directory public/ -cvf artifact.tar .
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: github-pages
+          path: artifact.tar
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pages: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        uses: actions/deploy-pages@v1
+        if: ${{ github.ref == 'refs/heads/main' }}
